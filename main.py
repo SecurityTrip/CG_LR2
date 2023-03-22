@@ -258,16 +258,16 @@ draw(v, f, model_v)
 model_v.save("modelv.png")
 
 
-#podpivas = Image.new(mode='RGB', size=[1000, 1000])
-#var = bariTrangles(v, f)
-#for i in range(len(var)):
-#    colour0 = randint(0, 255)
-#    colour1 = randint(0, 255)
-#    colour2 = randint(0, 255)
-#    for j in var[i]:
-#        podpivas.putpixel((int(j[0]), int(j[1])), (colour0, colour1, colour2))
+podpivas = Image.new(mode='RGB', size=[1000, 1000])
+var = bariTrangles(v, f)
+for i in range(len(var)):
+    colour0 = randint(0, 255)
+    colour1 = randint(0, 255)
+    colour2 = randint(0, 255)
+    for j in var[i]:
+        podpivas.putpixel((int(j[0]), int(j[1])), (colour0, colour1, colour2))
 
 
-#podpivas.save("podpivas.png")
+podpivas.save("podpivas.png")
 
 print(normal(v, f))
