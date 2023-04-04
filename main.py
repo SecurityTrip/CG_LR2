@@ -233,6 +233,9 @@ def draw(v, f, img):
 
 def normal(v, f):
     a = []
+    i1 = np.array([1, 0, 0])
+    j = np.array([0, 1, 0])
+    k = np.array([0, 0, 1])
     for i in range(len(f)):
         x0 = v[int(f[i][0]) - 1][0]
         x1 = v[int(f[i][1]) - 1][0]
@@ -244,14 +247,21 @@ def normal(v, f):
         z1 = v[int(f[i][1]) - 1][2]
         z2 = v[int(f[i][2]) - 1][2]
         n = np.cross([x1 - x0, y1 - y0, z1 - z0], [x1 - x2, y1 - y2, z1 - z2])
-        array = [[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
-                 [[x1 - x0, 0, 0], [0, y1 - y0, 0], [0, 0, z1 - z0]],
-                 [[x1 - x2, 0, 0], [0, y1 - y2, 0], [0, 0, z1 - z2]]]
-        detn = np.linalg.det(array)
-        a.append([list(n), list(detn)])
+
+        array1 = np.array([[y1 - y0, z1 - z0],
+                  [y1 - y2, z1 - z2]])
+        array2 = np.array([[x1 - x0, z1 - z0],
+                  [x1 - x2, z1 - z2]])
+        array3 = np.array([[x1 - x0, y1 - y0],
+                  [x1 - x2, y1 - y2]])
+        n2 = np.linalg.det(array1)*i1 - np.linalg.det(array2)*j + np.linalg.det(array3)*k
+
+
+        p = (np.dot(n, k))/(np.linalg.norm(n) * np.linalg.norm(k))
+        a.append(p)
+
 
     return a
-
 
 draw(v, f, model_v)
 
@@ -260,12 +270,15 @@ model_v.save("modelv.png")
 
 podpivas = Image.new(mode='RGB', size=[1000, 1000])
 var = bariTrangles(v, f)
+p = normal(v, f)
 for i in range(len(var)):
-    colour0 = randint(0, 255)
-    colour1 = randint(0, 255)
-    colour2 = randint(0, 255)
-    for j in var[i]:
-        podpivas.putpixel((int(j[0]), int(j[1])), (colour0, colour1, colour2))
+    #colour0 = randint(0, 255)
+    #colour1 = randint(0, 255)
+    #colour2 = randint(0, 255)
+    if (p[i] < 0):
+        colour = (int(255 * -p[i]), 0, 0)
+        for j in var[i]:
+            podpivas.putpixel((int(j[0]), int(j[1])), colour)
 
 
 podpivas.save("podpivas.png")
