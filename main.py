@@ -140,9 +140,6 @@ def bariSolve(v, f):
     return bariCords
 
 
-
-
-
 image_matrix_white = np.full((200, 200), 255, dtype=np.uint8)
 image_matrix_black = np.full((200, 200), 0, dtype=np.uint8)
 image_matrix_red = np.full((200, 200, 3), (255, 0, 0), dtype=np.uint8)
@@ -233,21 +230,50 @@ def normal(v, f):
         n2 = np.linalg.det(array1) * i1 - np.linalg.det(array2) * j + np.linalg.det(array3) * k
 
         p = (np.dot(n, k)) / (np.linalg.norm(n) * np.linalg.norm(k))
-        print(p)
+
         a.append(p)
 
     return a
+
+def new_cords(v,f,k,i):
+
+    vector = np.array([[v[int(f[i][k]) - 1][0]], [v[int(f[i][k]) - 1][1]], [v[int(f[i][k]) - 1][2]]])
+    dobavka = np.array([[0.005], [-0.045], [15]])
+    vector = vector + dobavka
+    matrix3x3 = [[10000, 0, 1000 / 2], [0, 10000, 1000 / 2], [0, 0, 1]]
+    tmp_matrix = np.matmul(matrix3x3, vector)
+    final_matrix = np.divide(tmp_matrix, v[int(f[i][0]) - 1][2])
+
+    alpha = 0
+    beta = 45
+    gamma = 0
+
+    R = np.matmul(
+        np.matmul([[1, 0, 0], [0, math.cos(alpha), math.sin(alpha)], [0, -math.sin(alpha), math.cos(alpha)]],
+                  [[math.cos(beta), 0, math.sin(beta)], [0, 1, 0], [-math.sin(beta), 0, math.cos(beta)]]),
+        [[math.cos(gamma), math.sin(gamma), 0], [-math.sin(gamma), math.cos(gamma), 0], [0, 0, 1]])
+
+    rotated = np.matmul(R, final_matrix)
+
+    return (rotated)
 
 def bariTrangles(v, f, buffer):
     trangles = []
     for i in range(len(f)):
         pixels = []
-        x0 = v[int(f[i][0]) - 1][0] * 10000 + 500
-        x1 = v[int(f[i][1]) - 1][0] * 10000 + 500
-        x2 = v[int(f[i][2]) - 1][0] * 10000 + 500
-        y0 = v[int(f[i][0]) - 1][1] * -10000
-        y1 = v[int(f[i][1]) - 1][1] * -10000
-        y2 = v[int(f[i][2]) - 1][1] * -10000
+
+
+        cords = []
+        for j in range(3):
+            cords.append(new_cords(v,f,j,i))
+
+        x0 = cords[0][0]
+        x1 = cords[1][0]
+        x2 = cords[2][0]
+
+        y0 = cords[1][0]
+        y1 = cords[1][1]
+        y2 = cords[1][2]
         xmin = min(x0, x1, x2)
         ymin = min(y0, y1, y2)
         xmax = max(x0, x1, x2)
@@ -266,6 +292,7 @@ def bariTrangles(v, f, buffer):
         trangles.append(pixels)
     return trangles
 
+
 draw(v, f, model_v)
 
 model_v.save("modelv.png")
@@ -276,10 +303,7 @@ zBuffer = np.full((1000, 1000), 1000000000.0)
 var = bariTrangles(v, f, zBuffer)
 p = normal(v, f)
 
-
 bari = bariSolve(v, f)
-
-
 
 for i in bari:
     flag = True
@@ -291,8 +315,8 @@ for i in bari:
             z0 = v[int(f[i][0]) - 1][2]
             z1 = v[int(f[i][1]) - 1][2]
             z2 = v[int(f[i][2]) - 1][2]
-            z_calc = bari[i][0]*z0+bari[i][1]*z1+bari[i][2]*z2
-            if(z_calc < zBuffer[var[0]][var[1]]):
+            z_calc = bari[i][0] * z0 + bari[i][1] * z1 + bari[i][2] * z2
+            if (z_calc < zBuffer[var[0]][var[1]]):
                 zBuffer[var[0]][var[1]] = z_calc
 
 for i in range(len(var)):
