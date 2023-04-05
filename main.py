@@ -140,33 +140,7 @@ def bariSolve(v, f):
     return bariCords
 
 
-def bariTrangles(v, f):
-    trangles = []
-    for i in range(len(f)):
-        pixels = []
-        x0 = v[int(f[i][0]) - 1][0] * 10000 + 500
-        x1 = v[int(f[i][1]) - 1][0] * 10000 + 500
-        x2 = v[int(f[i][2]) - 1][0] * 10000 + 500
-        y0 = v[int(f[i][0]) - 1][1] * -10000
-        y1 = v[int(f[i][1]) - 1][1] * -10000
-        y2 = v[int(f[i][2]) - 1][1] * -10000
-        xmin = min(x0, x1, x2)
-        ymin = min(y0, y1, y2)
-        xmax = max(x0, x1, x2)
-        ymax = max(y0, y1, y2)
-        if xmin < 0: xmin = 0
-        if ymin > 0: ymin = 0
-        for x in range(int(xmin), int(xmax)+1):
-            for y in range(int(ymin), int(ymax)+1):
-                flag = True
-                for g in baicenterCords(x0, x1, x2, y0, y1, y2, x, y):
-                    if g < 0:
-                        flag = False
-                if(flag):
-                    pixels.append([x, y])
 
-        trangles.append(pixels)
-    return trangles
 
 
 image_matrix_white = np.full((200, 200), 255, dtype=np.uint8)
@@ -231,6 +205,7 @@ def draw(v, f, img):
         line4(v[int(i[2] - 1)][0] * 10000 - 500, v[int(i[2] - 1)][1] * -10000, v[int(i[0] - 1)][0] * 10000 - 500,
               v[int(i[0] - 1)][1] * -10000, img)
 
+
 def normal(v, f):
     a = []
     i1 = np.array([1, 0, 0])
@@ -246,41 +221,89 @@ def normal(v, f):
         z0 = v[int(f[i][0]) - 1][2]
         z1 = v[int(f[i][1]) - 1][2]
         z2 = v[int(f[i][2]) - 1][2]
+
         n = np.cross([x1 - x0, y1 - y0, z1 - z0], [x1 - x2, y1 - y2, z1 - z2])
 
         array1 = np.array([[y1 - y0, z1 - z0],
-                  [y1 - y2, z1 - z2]])
+                           [y1 - y2, z1 - z2]])
         array2 = np.array([[x1 - x0, z1 - z0],
-                  [x1 - x2, z1 - z2]])
+                           [x1 - x2, z1 - z2]])
         array3 = np.array([[x1 - x0, y1 - y0],
-                  [x1 - x2, y1 - y2]])
-        n2 = np.linalg.det(array1)*i1 - np.linalg.det(array2)*j + np.linalg.det(array3)*k
+                           [x1 - x2, y1 - y2]])
+        n2 = np.linalg.det(array1) * i1 - np.linalg.det(array2) * j + np.linalg.det(array3) * k
 
-
-        p = (np.dot(n, k))/(np.linalg.norm(n) * np.linalg.norm(k))
+        p = (np.dot(n, k)) / (np.linalg.norm(n) * np.linalg.norm(k))
+        print(p)
         a.append(p)
 
-
     return a
+
+def bariTrangles(v, f, buffer):
+    trangles = []
+    for i in range(len(f)):
+        pixels = []
+        x0 = v[int(f[i][0]) - 1][0] * 10000 + 500
+        x1 = v[int(f[i][1]) - 1][0] * 10000 + 500
+        x2 = v[int(f[i][2]) - 1][0] * 10000 + 500
+        y0 = v[int(f[i][0]) - 1][1] * -10000
+        y1 = v[int(f[i][1]) - 1][1] * -10000
+        y2 = v[int(f[i][2]) - 1][1] * -10000
+        xmin = min(x0, x1, x2)
+        ymin = min(y0, y1, y2)
+        xmax = max(x0, x1, x2)
+        ymax = max(y0, y1, y2)
+        if xmin < 0: xmin = 0
+        if ymin > 0: ymin = 0
+        for x in range(int(xmin), int(xmax) + 1):
+            for y in range(int(ymin), int(ymax) + 1):
+                flag = True
+                for g in baicenterCords(x0, x1, x2, y0, y1, y2, x, y):
+                    if g < 0:
+                        flag = False
+                if (flag):
+                    pixels.append([x, y])
+
+        trangles.append(pixels)
+    return trangles
 
 draw(v, f, model_v)
 
 model_v.save("modelv.png")
 
-
 podpivas = Image.new(mode='RGB', size=[1000, 1000])
-var = bariTrangles(v, f)
+
+zBuffer = np.full((1000, 1000), 1000000000.0)
+var = bariTrangles(v, f, zBuffer)
 p = normal(v, f)
+
+
+bari = bariSolve(v, f)
+
+
+
+for i in bari:
+    flag = True
+    for j in i:
+        if j < 0:
+            flag = False
+    if (flag):
+        for i in range(len(f)):
+            z0 = v[int(f[i][0]) - 1][2]
+            z1 = v[int(f[i][1]) - 1][2]
+            z2 = v[int(f[i][2]) - 1][2]
+            z_calc = bari[i][0]*z0+bari[i][1]*z1+bari[i][2]*z2
+            if(z_calc < zBuffer[var[0]][var[1]]):
+                zBuffer[var[0]][var[1]] = z_calc
+
 for i in range(len(var)):
-    #colour0 = randint(0, 255)
-    #colour1 = randint(0, 255)
-    #colour2 = randint(0, 255)
+    # colour0 = randint(0, 255)
+    # colour1 = randint(0, 255)
+    # colour2 = randint(0, 255)
     if (p[i] < 0):
         colour = (int(255 * -p[i]), 0, 0)
         for j in var[i]:
             podpivas.putpixel((int(j[0]), int(j[1])), colour)
 
-
 podpivas.save("podpivas.png")
 
-print(normal(v, f))
+print("Done")
