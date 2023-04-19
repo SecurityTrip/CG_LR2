@@ -3,9 +3,26 @@ from dataclasses import dataclass
 from PIL import Image
 
 
+img_texture = Image.open("dirt.jpeg").convert('RGB')
+
 def background(width, height):
     return Image.new('RGB', (width, height), (0, 0, 0))
 
+@dataclass
+class TexturePoint:
+    x_index: int
+    y_index: int
+    z_index: int
+
+    def __init__(self, x, y, z):
+        self.x_index, self.y_index, self.z_index = x, y, z
+
+
+    def __str__(self):
+        return f'TexturePoint: {self.x_index} {self.y_index} {self.z_index}'
+
+    def toList(self):
+        return [self.x_index, self.y_index, self.z_index]
 
 @dataclass
 class Vertex:
@@ -33,7 +50,7 @@ class Vertex:
 
     @staticmethod
     def modifyProjection(a, b, c):
-        alpha, beta, gamma = 0, 0, 0
+        alpha, beta, gamma = 0, 45, 0
 
         rotate_x = np.array([
             [1, 0, 0],
@@ -58,7 +75,7 @@ class Vertex:
 
         x, y, z = list(np.dot(r, np.array([a, b, c])))
 
-        scale = [50000, -50000]
+        scale = [55000, -55000]
         center = [500, 600]
         offset = [0.005, -0.045, 15.0]
 
@@ -83,6 +100,13 @@ class Polygon:
     vn2: Vertex
     vn3: Vertex
 
+    cord_index1: TexturePoint
+    cord_index2: TexturePoint
+    cord_index3: TexturePoint
+
+    u: float
+    v: float
+
 
 def baricenter(v1: Vertex, v2: Vertex, v3: Vertex, point: tuple):
     x0, y0 = v1.x, v1.y
@@ -98,6 +122,7 @@ def baricenter(v1: Vertex, v2: Vertex, v3: Vertex, point: tuple):
 
 def triangle(p: Polygon, size: list, image: Image.Image, z_buffer: list):
     v1, v2, v3 = p.v1, p.v2, p.v3
+    vt1, vt2, vt3 = p.cord_index1, p.cord_index2, p.cord_index3
     width, height = size
     min_x, max_x = max(int(min(v1.x, v2.x, v3.x, width)), 0), min(int(max(v1.x, v2.x, v3.x, 0)), width)
     min_y, max_y = max(int(min(v1.y, v2.y, v3.y, height)), 0), min(int(max(v1.y, v2.y, v3.y, 0)), height)
@@ -122,8 +147,17 @@ def triangle(p: Polygon, size: list, image: Image.Image, z_buffer: list):
                 vn3 = np.array(p.vn1.toList())
                 a2 = np.dot(vn3, light) / np.linalg.norm(vn3) / np.linalg.norm(light)
 
-                k = int(255 * (l0 * a0 + l1 * a1 + l2 * a2))
-                image.putpixel((i, j), (k, k, k))
+                texture_width = img_texture.width
+                texture_height = img_texture.height
+
+                color_x = texture_width * (l0 * p.u + l1 * p.u + l2 * p.u)
+                color_y = texture_height * (l0 * p.v + l1 * p.v + l2 * p.v)
+
+                img_texture.getpixel((color_x, color_y))
+                k0 = int(img_texture.getpixel((color_x, color_y))[0] * (l0 * a0 + l1 * a1 + l2 * a2))
+                k1 = int(img_texture.getpixel((color_x, color_y))[1] * (l0 * a0 + l1 * a1 + l2 * a2))
+                k2 = int(img_texture.getpixel((color_x, color_y))[2] * (l0 * a0 + l1 * a1 + l2 * a2))
+                image.putpixel((i, j), (k0,k1,k2))
 
 
 def calc_cross(p1, p2, p3):
@@ -142,6 +176,15 @@ def parse(filename):
     s = []
     n = []
     f = []
+    vt = []
+    texture = []
+    with open(filename, 'r') as file:
+        for line in file:
+            if line:
+                if line[:2] == 'f ':
+                    v, v1, v2, v3 = line.split()
+                    texture.append(TexturePoint(int(v1.split('/')[1]), int(v2.split('/')[1]), int(v3.split('/')[1])))
+
     with open(filename, 'r') as file:
         for line in file:
             if line:
@@ -151,8 +194,14 @@ def parse(filename):
                 elif line[:3] == 'vn ':
                     v, x, y, z = line.split()
                     n.append(Vertex(float(x), float(y), float(z)))
+                elif line[:3] == 'vt ':
+                    v, x, y = line.split()
+                    tmp = [float(x), float(y)]
+                    vt.append(tmp)
+
                 elif line[:2] == 'f ':
                     v, v1, v2, v3 = line.split()
+
                     f.append(Polygon(
                         s[int(v1.split('/')[0]) - 1],
                         s[int(v2.split('/')[0]) - 1],
@@ -161,7 +210,15 @@ def parse(filename):
                         n[int(v1.split('/')[2]) - 1],
                         n[int(v2.split('/')[2]) - 1],
                         n[int(v3.split('/')[2]) - 1],
+
+                        texture[int(v1.split('/')[1]) - 1],
+                        texture[int(v2.split('/')[1]) - 1],
+                        texture[int(v3.split('/')[1]) - 1],
+
+                        vt[int(v1.split('/')[0]) - 1][0],
+                        vt[int(v1.split('/')[0]) - 1][1],
                     ))
+
     return f
 
 
@@ -171,13 +228,14 @@ def main():
     image = background(*size)
 
     f = parse('model_1.obj')
+
     for i, p in enumerate(f):
         cos = angle_cos(calc_cross(p.v1.toList(), p.v2.toList(), p.v3.toList()))
         if cos >= 0.0:
             continue
 
         triangle(p, size, image, z_buffer)
-    image.save('model_triangles.jpg')
+    image.save('image.jpg')
 
 
 if __name__ == '__main__':
